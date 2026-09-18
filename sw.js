@@ -1,5 +1,5 @@
 const CACHE_NAME="schedule-pwa-v1";
-const APP_SHELL=["./","./index.html","./manifest.webmanifest","./data.json"];
+const APP_SHELL=["./","./index.html","./manifest.webmanifest","./data.json","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
