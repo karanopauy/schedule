@@ -1,0 +1,10 @@
+{
+  "name": "A Schedule",
+  "short_name": "Schedule",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070a10",
+  "theme_color": "#070a10",
+  "description": "Offline weekly academic schedule",
+  "icons": []
+}

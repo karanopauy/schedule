@@ -1,0 +1,150 @@
+{
+  "busSchedule": ["07:45", "09:30", "11:00", "13:00", "15:00", "17:15", "20:10"],
+  "days": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "schedule": [
+    {
+      "day": "Tuesday",
+      "startTime": "11:00",
+      "course": "STAT203",
+      "group": "GR02",
+      "room": "ST102",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Tuesday",
+      "startTime": "12:00",
+      "course": "STAT203",
+      "group": "GR02",
+      "room": "ST102",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Tuesday",
+      "startTime": "17:00",
+      "course": "ITEC233",
+      "group": "GR02",
+      "room": "ST231",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Tuesday",
+      "startTime": "18:00",
+      "course": "ITEC233",
+      "group": "GR02",
+      "room": "ST231",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Tuesday",
+      "startTime": "19:00",
+      "course": "ITEC233",
+      "group": "GR02",
+      "room": "ST231",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Wednesday",
+      "startTime": "11:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "ST232",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Wednesday",
+      "startTime": "12:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "ST232",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Wednesday",
+      "startTime": "14:00",
+      "course": "STAT203",
+      "group": "GR02",
+      "room": "ST104",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Thursday",
+      "startTime": "15:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "ST260",
+      "type": "Office Hour"
+    },
+    {
+      "day": "Thursday",
+      "startTime": "16:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "ST232",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Thursday",
+      "startTime": "17:00",
+      "course": "DASC201",
+      "group": "GR01",
+      "room": "ST111",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Thursday",
+      "startTime": "18:00",
+      "course": "DASC201",
+      "group": "GR01",
+      "room": "ST111",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Thursday",
+      "startTime": "19:00",
+      "course": "DASC201",
+      "group": "GR01",
+      "room": "ST111",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Friday",
+      "startTime": "13:00",
+      "course": "ITEC271",
+      "group": "GR01",
+      "room": "ST234",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Friday",
+      "startTime": "17:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "GE120",
+      "type": "Lab Hour"
+    },
+    {
+      "day": "Friday",
+      "startTime": "18:00",
+      "course": "ITEC223",
+      "group": "GR01",
+      "room": "GE120",
+      "type": "Lab Hour"
+    },
+    {
+      "day": "Saturday",
+      "startTime": "09:00",
+      "course": "ITEC271",
+      "group": "GR01",
+      "room": "ST232",
+      "type": "Theoretical Hour"
+    },
+    {
+      "day": "Saturday",
+      "startTime": "10:00",
+      "course": "ITEC271",
+      "group": "GR01",
+      "room": "ST232",
+      "type": "Theoretical Hour"
+    }
+  ]
+}

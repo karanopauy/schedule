@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0E1A">
+<meta name="description" content="A living weekly academic schedule">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Weekly Schedule</title>
+<style>
+:root{
+  --bg:#0A0E1A;--panel:#12182C;--panel2:#161D34;--track:#252D4A;
+  --ink:#F3EFE7;--muted:#8A93B3;--amber:#FF9F5A;--cyan:#4FD1C5;
+  --shadow:0 20px 60px rgba(0,0,0,.45);
+  --hour-h:84px;
+  --gutter:58px;
+  font-size:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--ink)}
+body{
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding:18px 16px 60px;overflow-x:hidden;position:relative;
+}
+button{font:inherit;color:inherit;background:none;border:none}
+.app{width:min(640px,100%);margin:auto;position:relative;z-index:1}
+
+/* ---------- ambient ---------- */
+.ambient{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(560px 420px at 18% -6%, var(--ambient-a, rgba(255,159,90,.16)), transparent 65%),
+    radial-gradient(520px 420px at 100% 8%, var(--ambient-b, rgba(79,209,197,.10)), transparent 60%);
+  animation:breathe 9s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}}
+
+/* ---------- hero ---------- */
+.hero{padding:6px 2px 22px}
+.hero-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.hero-day{
+  font-family:"Fraunces",Georgia,serif;font-weight:500;font-optical-sizing:auto;
+  font-size:clamp(2.1rem,9vw,2.9rem);letter-spacing:-.01em;line-height:1;
+}
+.hero-clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.95rem;font-weight:500}
+.hero-status{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--ink);font-size:.92rem}
+.pulse-dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--muted);position:relative}
+.pulse-dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px solid currentColor;opacity:0}
+.pulse-dot.active{background:var(--amber);color:var(--amber)}
+.pulse-dot.active::after{animation:ring 1.8s ease-out infinite}
+.pulse-dot.free{background:var(--cyan);color:var(--cyan)}
+.pulse-dot.free::after{animation:ring 2.6s ease-out infinite}
+@keyframes ring{0%{transform:scale(.6);opacity:.55}100%{transform:scale(1.9);opacity:0}}
+
+/* ---------- day rail ---------- */
+.day-rail{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}
+.day-rail::-webkit-scrollbar{display:none}
+.day-chip{
+  flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:9px 14px;border-radius:14px;border:1px solid var(--track);background:var(--panel);
+  cursor:pointer;transition:.15s;
+}
+.day-chip .dname{font-size:.78rem;font-weight:600;color:var(--muted)}
+.day-chip.selected{border-color:var(--amber);background:rgba(255,159,90,.10)}
+.day-chip.selected .dname{color:var(--ink)}
+.day-chip .dmeter{display:flex;gap:3px}
+.day-chip .dmeter i{width:4px;height:4px;border-radius:50%;background:var(--track)}
+.day-chip.selected .dmeter i{background:var(--amber)}
+.day-chip .today-mark{width:4px;height:4px;border-radius:50%;background:var(--cyan)}
+
+/* ---------- legend / controls ---------- */
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.legend-item{display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--track);border-radius:999px;background:var(--panel);color:var(--muted);font-size:.75rem;cursor:pointer;user-select:none;transition:.15s}
+.legend-item.active{border-color:currentColor;color:var(--ink);background:var(--panel2)}
+.legend-item.dimmed{opacity:.45}
+.legend-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.controls{display:flex;align-items:center;gap:8px;margin-bottom:22px}
+.pill-btn{border:1px solid var(--track);background:var(--panel);border-radius:999px;padding:8px 13px;font-size:.74rem;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+.pill-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(255,159,90,.08)}
+.icon-btn{margin-left:auto;width:36px;height:36px;border:1px solid var(--track);background:var(--panel);border-radius:10px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.icon-btn svg{width:17px;height:17px}
+
+/* ---------- timeline (compact agenda, no dead-hour grid) ---------- */
+.timeline-wrap{background:var(--panel);border:1px solid var(--track);border-radius:20px;box-shadow:var(--shadow);padding:8px 14px}
+.timeline{display:flex;flex-direction:column}
+
+.gap-row{display:flex;align-items:center;gap:10px;margin:0 0 0 62px;padding:8px 0;color:var(--muted);font-size:.7rem}
+.gap-row .gap-line{flex:1;height:0;border-top:1px dashed var(--track)}
+
+.now-marker{display:flex;align-items:center;gap:10px;margin:2px 0 2px 62px;padding:4px 0;color:var(--amber);font-size:.72rem;font-weight:700}
+.now-marker .gap-line{flex:1;height:0;border-top:1.5px dashed var(--amber)}
+.now-marker .now-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;box-shadow:0 0 0 4px rgba(255,159,90,.18)}
+
+.beat{display:flex;align-items:flex-start;gap:12px;padding:10px 0;cursor:pointer;transition:.15s}
+.beat:active{transform:scale(.99)}
+.beat .btime{width:50px;flex:none;padding-top:11px;font-size:.74rem;font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.beat .bcard{flex:1;border-radius:12px;border-left:3px solid;padding:9px 12px;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.beat .btitle{font-weight:650;font-size:.86rem;line-height:1.15;color:var(--ink)}
+.beat .bmeta{font-size:.72rem;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.beat .bbus{font-size:.68rem;font-weight:700;color:var(--cyan)}
+
+.color-0{color:#FF9F5A;border-color:#FF9F5A;background:rgba(255,159,90,.12)}
+.color-1{color:#4FD1C5;border-color:#4FD1C5;background:rgba(79,209,197,.12)}
+.color-2{color:#9C8CFF;border-color:#9C8CFF;background:rgba(156,140,255,.12)}
+.color-3{color:#FF6F91;border-color:#FF6F91;background:rgba(255,111,145,.12)}
+.color-4{color:#A8D08A;border-color:#A8D08A;background:rgba(168,208,138,.12)}
+.color-0 .btitle,.color-1 .btitle,.color-2 .btitle,.color-3 .btitle,.color-4 .btitle{color:var(--ink)}
+
+.empty-state{display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:.85rem;padding:40px 20px}
+
+/* ---------- modals ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(3,5,10,.72);backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:.2s;z-index:100}
+.modal-overlay.active{opacity:1;pointer-events:auto}
+.modal{width:min(400px,calc(100% - 28px));background:var(--panel2);border:1px solid var(--track);border-radius:18px;padding:20px;box-shadow:var(--shadow);transform:translateY(8px);transition:.2s}
+.modal-overlay.active .modal{transform:translateY(0)}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.modal-title{font-family:"Fraunces",Georgia,serif;font-size:1.2rem;font-weight:500}
+.modal-close{color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1}
+.info-row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+.info-row:last-child{border-bottom:0}.info-label{color:var(--muted);font-size:.8rem}.info-value{font-size:.82rem;font-weight:650;text-align:right}.bus-highlight{color:var(--cyan)}
+.settings-list{display:flex;flex-direction:column;gap:10px}.setting-button{width:100%;border:1px solid var(--track);background:var(--panel);border-radius:12px;padding:12px;text-align:left;cursor:pointer}.setting-button strong{display:block;font-size:.82rem}.setting-button span{display:block;margin-top:3px;color:var(--muted);font-size:.72rem}.status{margin-top:12px;color:var(--muted);font-size:.74rem;line-height:1.4}.status.success{color:#57d39b}.status.error{color:#ff8e8e}
+
+@media(max-width:420px){
+  :root{--hour-h:64px;--gutter:44px}
+  body{padding:14px 10px 50px}
+  .beat .bmeta{display:none}
+}
+</style>
+</head>
+<body>
+<div class="ambient" id="ambient"></div>
+<div class="app">
+  <header class="hero">
+    <div class="hero-top">
+      <div class="hero-day" id="heroDay">—</div>
+      <div class="hero-clock" id="heroClock">--:--</div>
+    </div>
+    <div class="hero-status">
+      <span class="pulse-dot" id="pulseDot"></span>
+      <span id="heroStatusText">Loading your week…</span>
+    </div>
+  </header>
+
+  <nav class="day-rail" id="dayRail"></nav>
+
+  <div class="legend" id="legendContainer"></div>
+
+  <div class="controls">
+    <button class="pill-btn" id="officeHourBtn">Office hours</button>
+    <button class="pill-btn" id="onlyOfficeHourBtn">Only office hours</button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+        <path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3.1 1.3v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3.1-1.3l-.1.1a1.8 1.8 0 0 1-2.5-2.5l.1-.1A1.8 1.8 0 0 0 3.3 12a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 1.3-3.1l-.1-.1a1.8 1.8 0 0 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3.1-1.3v-.2a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3.1 1.3l.1-.1a1.8 1.8 0 0 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 1.3 3.1h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-1.3 3.1Z"/>
+      </svg>
+    </button>
+  </div>
+
+  <main class="timeline-wrap">
+    <div class="timeline" id="timeline"></div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="infoModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="modalTitle">Course</div><button class="modal-close" id="modalClose" aria-label="Close">&times;</button></div>
+    <div>
+      <div class="info-row"><span class="info-label">Type</span><span class="info-value" id="modalType">-</span></div>
+      <div class="info-row"><span class="info-label">Class time</span><span class="info-value" id="modalStart">-</span></div>
+      <div class="info-row"><span class="info-label">Classroom</span><span class="info-value" id="modalRoom">-</span></div>
+      <div class="info-row"><span class="info-label">Recommended bus</span><span class="info-value bus-highlight" id="modalBus">-</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Settings</div><button class="modal-close" id="settingsClose" aria-label="Close">&times;</button></div>
+    <div class="settings-list">
+      <button class="setting-button" id="resyncBtn">
+        <strong>Resync data.json</strong>
+        <span>Fetch the latest schedule and replace the cached schedule data.</span>
+      </button>
+    </div>
+    <div class="status" id="syncStatus"></div>
+  </div>
+</div>
+
+<script>
+const START_HOUR=9, END_HOUR=19;
+const COLOR_PALETTE=["#FF9F5A","#4FD1C5","#9C8CFF","#FF6F91","#A8D08A"];
+const DATA_URL="data.json";
+let scheduleData=null;
+let selectedDay=null;
+let selectedCourses=new Set();
+let showOfficeHours=false;
+let onlyOfficeHours=false;
+
+function timeToMinutes(t){const [h,m]=t.split(":").map(Number);return h*60+m}
+function format12h(t){let [h,m]=t.split(":").map(Number);const ap=h>=12?"PM":"AM";h=h%12||12;return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")} ${ap}`}
+function getOptimalBus(classTime,buses){const target=timeToMinutes(classTime);let best=null;for(const b of (buses||[])){if(timeToMinutes(b)<target)best=b;else break}return best}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function todayName(){return new Date().toLocaleDateString("en-US",{weekday:"long"})}
+
+function setAmbient(){
+  const h=new Date().getHours();
+  const el=document.getElementById("ambient");
+  if(h>=20||h<6){el.style.setProperty("--ambient-a","rgba(79,209,197,.10)");el.style.setProperty("--ambient-b","rgba(156,140,255,.10)")}
+  else if(h>=17){el.style.setProperty("--ambient-a","rgba(255,159,90,.20)");el.style.setProperty("--ambient-b","rgba(255,111,145,.10)")}
+  else{el.style.setProperty("--ambient-a","rgba(255,159,90,.14)");el.style.setProperty("--ambient-b","rgba(79,209,197,.12)")}
+}
+
+function renderCalendar(data){
+  scheduleData=data;
+  const {busSchedule=[],days=[],schedule=[]}=data;
+  if(!selectedDay) selectedDay=days.find(d=>d.toLowerCase()===todayName().toLowerCase())||days[0];
+
+  const courses=[...new Set(schedule.map(x=>x.course))];
+  const colorMap=new Map(courses.map((c,i)=>[c,i%COLOR_PALETTE.length]));
+
+  // legend / course filters
+  const legend=document.getElementById("legendContainer");
+  legend.innerHTML="";
+  courses.forEach(c=>{
+    const i=colorMap.get(c);
+    const el=document.createElement("div");
+    el.className="legend-item"+(selectedCourses.has(c)?" active":" dimmed");
+    el.style.color=COLOR_PALETTE[i];
+    el.setAttribute("role","button");el.setAttribute("tabindex","0");
+    el.setAttribute("aria-pressed",selectedCourses.has(c)?"true":"false");
+    el.innerHTML=`<span class="legend-dot" style="background:${COLOR_PALETTE[i]}"></span>${escapeHtml(c)}`;
+    const toggle=()=>{selectedCourses.has(c)?selectedCourses.delete(c):selectedCourses.add(c);renderCalendar(scheduleData)};
+    el.addEventListener("click",toggle);
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle()}});
+    legend.appendChild(el);
+  });
+
+  const filteredBySubject=selectedCourses.size?schedule.filter(x=>selectedCourses.has(x.course)):schedule;
+  const visibleSchedule=onlyOfficeHours
+    ? filteredBySubject.filter(x=>String(x.type||"").trim().toLowerCase()==="office hour")
+    : showOfficeHours ? filteredBySubject
+      : filteredBySubject.filter(x=>String(x.type||"").trim().toLowerCase()!=="office hour");
+
+  // day rail
+  const rail=document.getElementById("dayRail");
+  rail.innerHTML="";
+  days.forEach(day=>{
+    const count=visibleSchedule.filter(x=>x.day?.toLowerCase()===day.toLowerCase()).length;
+    const chip=document.createElement("div");
+    chip.className="day-chip"+(day===selectedDay?" selected":"");
+    const dots=Array.from({length:Math.min(count,4)}).map(()=>"<i></i>").join("");
+    chip.innerHTML=`<span class="dname">${escapeHtml(day.slice(0,3))}</span><span class="dmeter">${dots||"<i></i>"}</span>${day.toLowerCase()===todayName().toLowerCase()?'<span class="today-mark"></span>':""}`;
+    chip.addEventListener("click",()=>{selectedDay=day;renderCalendar(scheduleData)});
+    rail.appendChild(chip);
+  });
+
+  renderTimeline(selectedDay,visibleSchedule,busSchedule,colorMap);
+  renderHero(selectedDay,visibleSchedule);
+}
+
+function renderHero(day,visibleSchedule){
+  const isToday=day.toLowerCase()===todayName().toLowerCase();
+  const now=new Date();
+  document.getElementById("heroDay").textContent=day;
+  document.getElementById("heroClock").textContent=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+
+  const dot=document.getElementById("pulseDot");
+  const statusText=document.getElementById("heroStatusText");
+  const classesToday=visibleSchedule.filter(x=>x.day?.toLowerCase()===day.toLowerCase())
+    .sort((a,b)=>timeToMinutes(a.startTime)-timeToMinutes(b.startTime));
+
+  dot.className="pulse-dot";
+  if(!classesToday.length){
+    statusText.textContent=isToday?"Nothing on the books today.":`No classes scheduled ${day}.`;
+    return;
+  }
+  if(!isToday){
+    statusText.textContent=`${classesToday.length} class${classesToday.length>1?"es":""} · starts ${format12h(classesToday[0].startTime)}`;
+    return;
+  }
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const current=classesToday.find(c=>nowMin>=timeToMinutes(c.startTime)&&nowMin<timeToMinutes(c.startTime)+60);
+  if(current){
+    const left=timeToMinutes(current.startTime)+60-nowMin;
+    dot.classList.add("active");
+    statusText.textContent=`In class — ${current.course} wraps up in ${left}m`;
+    return;
+  }
+  const next=classesToday.find(c=>timeToMinutes(c.startTime)>nowMin);
+  if(next){
+    const mins=timeToMinutes(next.startTime)-nowMin;
+    const until=mins>=60?`${Math.floor(mins/60)}h ${mins%60}m`:`${mins}m`;
+    dot.classList.add("free");
+    statusText.textContent=`Free — ${next.course} starts in ${until}`;
+    return;
+  }
+  statusText.textContent="Done for today. Rest of the day is yours.";
+}
+
+function gapLabel(mins){
+  if(mins<=0)return "";
+  const h=Math.floor(mins/60),m=mins%60;
+  return h>0?`${h}h${m?` ${m}m`:""} free`:`${m}m free`;
+}
+
+function renderTimeline(day,visibleSchedule,busSchedule,colorMap){
+  const timeline=document.getElementById("timeline");
+  timeline.innerHTML="";
+  const DEFAULT_DURATION=60;
+
+  const events=visibleSchedule.filter(x=>x.day?.toLowerCase()===day.toLowerCase())
+    .sort((a,b)=>timeToMinutes(a.startTime)-timeToMinutes(b.startTime));
+
+  if(!events.length){
+    const empty=document.createElement("div");
+    empty.className="empty-state";
+    empty.textContent="No classes here. Pick another day above, or clear a filter.";
+    timeline.appendChild(empty);
+    return;
+  }
+
+  const isToday=day.toLowerCase()===todayName().toLowerCase();
+  const nowMin=isToday?new Date().getHours()*60+new Date().getMinutes():null;
+  let nowPlaced=false;
+  let prevEnd=null;
+
+  const placeNowMarker=()=>{
+    if(nowPlaced||nowMin==null)return;
+    const marker=document.createElement("div");
+    marker.className="now-marker";
+    marker.innerHTML=`<span class="now-dot"></span><span class="gap-line"></span><span>now</span>`;
+    timeline.appendChild(marker);
+    nowPlaced=true;
+  };
+
+  events.forEach(item=>{
+    const startMin=timeToMinutes(item.startTime);
+    const endMin=item.endTime?timeToMinutes(item.endTime):startMin+DEFAULT_DURATION;
+    const bus=getOptimalBus(item.startTime,busSchedule);
+
+    if(nowMin!=null&&!nowPlaced&&nowMin<startMin)placeNowMarker();
+
+    if(prevEnd!=null&&startMin>prevEnd){
+      const gap=document.createElement("div");
+      gap.className="gap-row";
+      gap.innerHTML=`<span class="gap-line"></span><span>${gapLabel(startMin-prevEnd)}</span><span class="gap-line"></span>`;
+      timeline.appendChild(gap);
+    }
+
+    const beat=document.createElement("div");
+    beat.className="beat";
+    beat.innerHTML=`
+      <div class="btime">${format12h(item.startTime).replace(" ","<br>")}</div>
+      <div class="bcard color-${colorMap.get(item.course)}">
+        <div class="btitle">${escapeHtml(item.course)}</div>
+        <div class="bmeta"><span>${escapeHtml(item.group)}</span><span>· ${escapeHtml(item.room)}</span>${bus?`<span class="bbus">Bus ${format12h(bus)}</span>`:""}</div>
+      </div>
+    `;
+    beat.addEventListener("click",()=>openInfo(item,bus));
+    timeline.appendChild(beat);
+    prevEnd=endMin;
+  });
+
+  if(nowMin!=null&&!nowPlaced&&nowMin>=prevEnd)placeNowMarker();
+}
+
+function openInfo(item,bus){
+  document.getElementById("modalTitle").textContent=`${item.course} (${item.group})`;
+  document.getElementById("modalType").textContent=item.type||"-";
+  document.getElementById("modalStart").textContent=format12h(item.startTime);
+  document.getElementById("modalRoom").textContent=item.room||"-";
+  document.getElementById("modalBus").textContent=bus?format12h(bus):"N/A";
+  document.getElementById("infoModal").classList.add("active");
+}
+
+async function loadData(forceNetwork=false){
+  try{
+    if(forceNetwork){
+      const r=await fetch(DATA_URL,{cache:"no-store"});
+      if(!r.ok)throw new Error(`Server returned ${r.status}`);
+      const data=await r.json();
+      renderCalendar(data);await cacheData(data);
+      setStatus("Schedule data updated successfully.","success");
+      return data;
+    }
+    const cached=await getCachedData();
+    if(cached){renderCalendar(cached);return cached}
+    const r=await fetch(DATA_URL);
+    if(!r.ok)throw new Error(`Server returned ${r.status}`);
+    const data=await r.json();renderCalendar(data);await cacheData(data);
+    return data;
+  }catch(err){
+    console.error(err);
+    document.getElementById("heroStatusText").textContent="Could not load your schedule.";
+    document.getElementById("timeline").innerHTML=`<div class="empty-state">The schedule could not be loaded. Check that data.json is available, or resync from Settings.</div>`;
+    throw err;
+  }
+}
+
+async function cacheData(data){
+  if("caches" in window){
+    const cache=await caches.open("schedule-data-v1");
+    await cache.put(new Request(DATA_URL),new Response(JSON.stringify(data),{headers:{"Content-Type":"application/json"}}));
+  }
+}
+async function getCachedData(){
+  if(!("caches" in window))return null;
+  const cache=await caches.open("schedule-data-v1");const r=await cache.match(DATA_URL);
+  if(!r)return null;try{return await r.json()}catch{return null}
+}
+function setStatus(text,type=""){const el=document.getElementById("syncStatus");el.textContent=text;el.className=`status ${type}`}
+
+const officeHourBtn=document.getElementById("officeHourBtn");
+const onlyOfficeHourBtn=document.getElementById("onlyOfficeHourBtn");
+function updateOfficeHourMode(){
+  officeHourBtn.classList.toggle("active",showOfficeHours&&!onlyOfficeHours);
+  onlyOfficeHourBtn.classList.toggle("active",onlyOfficeHours);
+}
+officeHourBtn.onclick=()=>{
+  if(onlyOfficeHours){onlyOfficeHours=false;showOfficeHours=true}
+  else showOfficeHours=!showOfficeHours;
+  updateOfficeHourMode();renderCalendar(scheduleData);
+};
+onlyOfficeHourBtn.onclick=()=>{
+  onlyOfficeHours=!onlyOfficeHours;showOfficeHours=onlyOfficeHours;
+  updateOfficeHourMode();renderCalendar(scheduleData);
+};
+updateOfficeHourMode();
+
+document.getElementById("settingsBtn").onclick=()=>document.getElementById("settingsModal").classList.add("active");
+document.getElementById("settingsClose").onclick=()=>document.getElementById("settingsModal").classList.remove("active");
+document.getElementById("modalClose").onclick=()=>document.getElementById("infoModal").classList.remove("active");
+document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("active")}));
+
+document.getElementById("resyncBtn").onclick=async()=>{
+  const b=document.getElementById("resyncBtn");b.disabled=true;setStatus("Syncing the latest data.json…");
+  try{await loadData(true)}
+  catch{setStatus("Sync failed. The previous cached schedule is still available when possible.","error")}
+  finally{b.disabled=false}
+};
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(err=>console.error("Service worker registration failed",err));
+setAmbient();
+loadData().catch(()=>{});
+setInterval(()=>{setAmbient();if(scheduleData)renderCalendar(scheduleData)},30000);
+</script>
+</body>
+</html>
