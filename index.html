@@ -181,7 +181,7 @@ button{font:inherit;color:inherit;background:none;border:none}
     <div class="modal-header"><div class="modal-title">Settings</div><button class="modal-close" id="settingsClose" aria-label="Close">&times;</button></div>
     <div class="settings-list">
       <button class="setting-button" id="resyncBtn">
-        <strong>Resync data.json</strong>
+        <strong>Resync timetable</strong>
         <span>Fetch the latest schedule and replace the cached schedule data.</span>
       </button>
     </div>
@@ -192,7 +192,7 @@ button{font:inherit;color:inherit;background:none;border:none}
 <script>
 const START_HOUR=9, END_HOUR=19;
 const COLOR_PALETTE=["#FF9F5A","#4FD1C5","#9C8CFF","#FF6F91","#A8D08A"];
-const DATA_URL="data.json";
+const DATA_URL="ciuroutineextract.householdhandle.qzz.io";
 let scheduleData=null;
 let selectedDay=null;
 let selectedCourses=new Set();
@@ -395,7 +395,7 @@ async function loadData(forceNetwork=false){
   }catch(err){
     console.error(err);
     document.getElementById("heroStatusText").textContent="Could not load your schedule.";
-    document.getElementById("timeline").innerHTML=`<div class="empty-state">The schedule could not be loaded. Check that data.json is available, or resync from Settings.</div>`;
+    document.getElementById("timeline").innerHTML=`<div class="empty-state">The schedule could not be loaded. Check that server is available, or resync from Settings.</div>`;
     throw err;
   }
 }
@@ -436,7 +436,7 @@ document.getElementById("modalClose").onclick=()=>document.getElementById("infoM
 document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("active")}));
 
 document.getElementById("resyncBtn").onclick=async()=>{
-  const b=document.getElementById("resyncBtn");b.disabled=true;setStatus("Syncing the latest data.json…");
+  const b=document.getElementById("resyncBtn");b.disabled=true;setStatus("Syncing the latest timetable…");
   try{await loadData(true)}
   catch{setStatus("Sync failed. The previous cached schedule is still available when possible.","error")}
   finally{b.disabled=false}
