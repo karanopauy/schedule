@@ -377,9 +377,9 @@ function openInfo(item,bus){
 }
 
 /**
- * Stream SSE events from backend and handle live step progress / result / error
+ * Stream SSE events from backend and update live step progress, elapsed timer, result, and errors
  */
-async function fetchStreamData(onStep) {
+async function fetchStreamData(onProgressUpdate) {
   const response = await fetch(DATA_URL, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`HTTP network error ${response.status}`);
@@ -390,36 +390,63 @@ async function fetchStreamData(onStep) {
   let buffer = "";
   let finalResult = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  let currentStep = null;
+  let stageStartTime = null;
+  let timerId = null;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop(); // Keep remaining incomplete fragment in buffer
+  const stopTimer = () => {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  };
 
-    let currentEvent = null;
-    for (const line of lines) {
-      if (line.startsWith("event: ")) {
-        currentEvent = line.replace("event: ", "").trim();
-      } else if (line.startsWith("data: ") && currentEvent) {
-        const rawData = line.replace("data: ", "").trim();
-        try {
-          const payload = JSON.parse(rawData);
-          if (currentEvent === "step" && onStep) {
-            onStep(payload);
-          } else if (currentEvent === "result") {
-            finalResult = payload;
-          } else if (currentEvent === "error") {
-            throw new Error(payload.message || "An unknown sector error occurred on server.");
+  const notifyProgress = () => {
+    if (!currentStep || !onProgressUpdate) return;
+    const elapsedSec = Math.floor((Date.now() - stageStartTime) / 1000);
+    onProgressUpdate(currentStep, elapsedSec);
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // Keep remaining incomplete fragment in buffer
+
+      let currentEvent = null;
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.replace("event: ", "").trim();
+        } else if (line.startsWith("data: ") && currentEvent) {
+          const rawData = line.replace("data: ", "").trim();
+          try {
+            const payload = JSON.parse(rawData);
+            if (currentEvent === "step") {
+              currentStep = payload;
+              stageStartTime = Date.now();
+              stopTimer();
+              notifyProgress();
+              timerId = setInterval(notifyProgress, 1000);
+            } else if (currentEvent === "result") {
+              stopTimer();
+              finalResult = payload;
+            } else if (currentEvent === "error") {
+              stopTimer();
+              throw new Error(payload.message || "An unknown sector error occurred on server.");
+            }
+          } catch (err) {
+            if (currentEvent === "error") throw err;
+            console.warn("Failed to parse SSE line", err);
           }
-        } catch (err) {
-          if (currentEvent === "error") throw err;
-          console.warn("Failed to parse SSE line", err);
+          currentEvent = null;
         }
-        currentEvent = null;
       }
     }
+  } finally {
+    stopTimer();
   }
 
   if (!finalResult) {
@@ -428,11 +455,16 @@ async function fetchStreamData(onStep) {
   return finalResult;
 }
 
+function formatElapsedMessage(stepInfo, elapsedSec) {
+  const timeStr = elapsedSec > 0 ? ` (${elapsedSec}s)` : "";
+  return `[${stepInfo.step}] ${stepInfo.description}${timeStr}`;
+}
+
 async function loadData(forceNetwork=false){
   try{
     if(forceNetwork){
-      const data = await fetchStreamData((stepInfo) => {
-        setStatus(`[${stepInfo.step}] ${stepInfo.description}`);
+      const data = await fetchStreamData((stepInfo, elapsedSec) => {
+        setStatus(formatElapsedMessage(stepInfo, elapsedSec));
       });
       renderCalendar(data);
       await cacheData(data);
@@ -446,8 +478,8 @@ async function loadData(forceNetwork=false){
       return cached;
     }
 
-    const data = await fetchStreamData((stepInfo) => {
-      document.getElementById("heroStatusText").textContent = stepInfo.description;
+    const data = await fetchStreamData((stepInfo, elapsedSec) => {
+      document.getElementById("heroStatusText").textContent = `${stepInfo.description}${elapsedSec > 0 ? ` (${elapsedSec}s)` : ""}`;
     });
     renderCalendar(data);
     await cacheData(data);
