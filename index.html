@@ -376,26 +376,86 @@ function openInfo(item,bus){
   document.getElementById("infoModal").classList.add("active");
 }
 
+/**
+ * Stream SSE events from backend and handle live step progress / result / error
+ */
+async function fetchStreamData(onStep) {
+  const response = await fetch(DATA_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP network error ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let finalResult = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop(); // Keep remaining incomplete fragment in buffer
+
+    let currentEvent = null;
+    for (const line of lines) {
+      if (line.startsWith("event: ")) {
+        currentEvent = line.replace("event: ", "").trim();
+      } else if (line.startsWith("data: ") && currentEvent) {
+        const rawData = line.replace("data: ", "").trim();
+        try {
+          const payload = JSON.parse(rawData);
+          if (currentEvent === "step" && onStep) {
+            onStep(payload);
+          } else if (currentEvent === "result") {
+            finalResult = payload;
+          } else if (currentEvent === "error") {
+            throw new Error(payload.message || "An unknown sector error occurred on server.");
+          }
+        } catch (err) {
+          if (currentEvent === "error") throw err;
+          console.warn("Failed to parse SSE line", err);
+        }
+        currentEvent = null;
+      }
+    }
+  }
+
+  if (!finalResult) {
+    throw new Error("Stream closed before receiving final schedule payload.");
+  }
+  return finalResult;
+}
+
 async function loadData(forceNetwork=false){
   try{
     if(forceNetwork){
-      const r=await fetch(DATA_URL,{cache:"no-store"});
-      if(!r.ok)throw new Error(`Server returned ${r.status}`);
-      const data=await r.json();
-      renderCalendar(data);await cacheData(data);
+      const data = await fetchStreamData((stepInfo) => {
+        setStatus(`[${stepInfo.step}] ${stepInfo.description}`);
+      });
+      renderCalendar(data);
+      await cacheData(data);
       setStatus("Schedule data updated successfully.","success");
       return data;
     }
-    const cached=await getCachedData();
-    if(cached){renderCalendar(cached);return cached}
-    const r=await fetch(DATA_URL);
-    if(!r.ok)throw new Error(`Server returned ${r.status}`);
-    const data=await r.json();renderCalendar(data);await cacheData(data);
+
+    const cached = await getCachedData();
+    if(cached){
+      renderCalendar(cached);
+      return cached;
+    }
+
+    const data = await fetchStreamData((stepInfo) => {
+      document.getElementById("heroStatusText").textContent = stepInfo.description;
+    });
+    renderCalendar(data);
+    await cacheData(data);
     return data;
   }catch(err){
     console.error(err);
     document.getElementById("heroStatusText").textContent="Could not load your schedule.";
-    document.getElementById("timeline").innerHTML=`<div class="empty-state">The schedule could not be loaded. Check that server is available, or resync from Settings.</div>`;
+    document.getElementById("timeline").innerHTML=`<div class="empty-state">The schedule could not be loaded.<br><span style="font-size:0.75rem;margin-top:8px;display:block;color:#ff8e8e;">${escapeHtml(err.message)}</span></div>`;
     throw err;
   }
 }
@@ -436,9 +496,9 @@ document.getElementById("modalClose").onclick=()=>document.getElementById("infoM
 document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("active")}));
 
 document.getElementById("resyncBtn").onclick=async()=>{
-  const b=document.getElementById("resyncBtn");b.disabled=true;setStatus("Syncing the latest timetable…");
+  const b=document.getElementById("resyncBtn");b.disabled=true;setStatus("Connecting to server stream…");
   try{await loadData(true)}
-  catch{setStatus("Sync failed. The previous cached schedule is still available when possible.","error")}
+  catch(err){setStatus(`Sync failed: ${err.message}`,"error")}
   finally{b.disabled=false}
 };
 
